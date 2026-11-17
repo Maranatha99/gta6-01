@@ -50,6 +50,7 @@ function refreshMenu() {
 
 function runShot(name) {
   const scene = stageShot(name, world);
+  window.__world = world; // debug hook: lets a playtest read the staged state
   const shotUi = {
     ...ui,
     objective: world.missionLabel(),

@@ -66,10 +66,10 @@ export function drawHud(ctx, view, state, ui) {
   ctx.fillText(`Ammo ${state.player.ammo}`, 24, 68);
 
   // Wanted stars, top-right above the minimap.
-  drawStars(ctx, width - MAP_SIZE - MAP_PAD - 8, 44, state.stars);
+  drawStars(ctx, width - MAP_SIZE - MAP_PAD - 8, 36, state.stars);
 
   // Minimap.
-  drawMinimap(ctx, width - MAP_SIZE - MAP_PAD, 58, state, ui);
+  drawMinimap(ctx, width - MAP_SIZE - MAP_PAD, 64, state, ui);
 
   // Mission objective banner, top-centre.
   const label = ui.objective;
@@ -192,11 +192,11 @@ function drawMinimap(ctx, x, y, state, ui) {
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.restore();
-  // North label.
+  // North label, bottom-left so it never sits under the stars.
   ctx.font = `bold 11px ${FONT}`;
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'left';
-  ctx.fillText('N', x + 4, y + 13);
+  ctx.fillText('N', x + 4, y + MAP_SIZE - 6);
   ctx.restore();
 }
 

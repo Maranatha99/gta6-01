@@ -7,19 +7,36 @@
 import { STEP } from './config.js';
 import { SCREEN_PLAY, SCREEN_TITLE } from './render.js';
 import { makeCar } from './vehicles.js';
+import { nearestRoad } from './city.js';
 
 const SAMPLE = STEP;
+
+/** Manhattan navigation: stay on the roads and turn only at intersections. */
+function navPoint(car, tx, ty) {
+  const rx = nearestRoad(car.x);
+  const ry = nearestRoad(car.y);
+  const onH = Math.abs(car.y - ry) < 24;
+  const onV = Math.abs(car.x - rx) < 24;
+  if (onH && Math.abs(tx - car.x) > 90) return { x: tx, y: ry };
+  if (onV && Math.abs(ty - car.y) > 90) return { x: rx, y: ty };
+  if (onH) return { x: rx, y: ty };
+  if (onV) return { x: tx, y: ry };
+  return { x: rx, y: ry };
+}
 
 /** Steer a car along the road grid toward (tx, ty): returns a fake input object. */
 function driveInput(world, tx, ty) {
   const car = world.state.player.inCar;
   if (!car) return { up: false, down: false, left: false, right: false, run: false, fire: false, handbrake: false };
-  const want = Math.atan2(ty - car.y, tx - car.x);
+  const nav = navPoint(car, tx, ty);
+  const want = Math.atan2(nav.y - car.y, nav.x - car.x);
   let diff = want - car.angle;
   while (diff > Math.PI) diff -= Math.PI * 2;
   while (diff < -Math.PI) diff += Math.PI * 2;
+  // Ease off the throttle in a hard turn so the car does not swing wide off the road.
+  const throttle = Math.abs(diff) > 1.1 ? Math.abs(car.speed) < 200 : true;
   return {
-    up: true, down: false,
+    up: throttle, down: false,
     left: diff < -0.08, right: diff > 0.08,
     run: false, fire: false, handbrake: false,
   };
@@ -66,7 +83,7 @@ function stagePlay(world) {
 function stageChase(world) {
   placeInCar(world, 1000, 1000, 0);
   world.addHeat(130);
-  driveFor(world, 9, [{ x: 1800, y: 1000 }, { x: 1800, y: 1800 }, { x: 1000, y: 1800 }]);
+  driveFor(world, 7, [{ x: 1800, y: 1000 }, { x: 1800, y: 1800 }, { x: 1000, y: 1800 }]);
   return { screen: SCREEN_PLAY, ui: {} };
 }
 

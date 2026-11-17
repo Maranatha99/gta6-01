@@ -396,6 +396,10 @@ export function createRenderer(canvas, city) {
       if (c.dead) drawWreck(c);
       else drawCar(c);
     }
+    for (const c of state.police.cars) {
+      if (c.dead) drawWreck(c);
+      else drawCar(c);
+    }
     for (const cop of state.police.cops) drawCop(cop);
     for (const ped of state.peds) drawPed(ped);
     for (const rival of state.rivals) drawPed(rival);
@@ -423,7 +427,6 @@ export function createRenderer(canvas, city) {
     drawObjectiveMarker(state, ui);
     context.setTransform(1, 0, 0, 1, 0, 0);
     // Screen-space: apply devicePixelRatio transform already set in resize; redraw HUD in CSS pixels.
-    const ratio = window.devicePixelRatio || 1;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     drawHud(context, view, state, ui);
   }

@@ -42,7 +42,7 @@ export const WANTED = {
 };
 
 export const POLICE = {
-  carSpeed: 545,
+  carSpeed: 605,
   footSpeed: 178,
   ramDamage: 8,
   shootRange: 380,

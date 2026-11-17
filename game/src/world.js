@@ -2,13 +2,13 @@
 // and in cars, traffic, pedestrians, police and wanted heat, missions, combat and
 // pickups. step() advances one fixed step and returns what happened as bit flags, so the
 // caller can react (sounds, messages) without the world knowing about screens or sound.
-import { CAR, MISSIONS, MONEY, PLAYER, STEP, WANTED, WORLD } from './config.js';
+import { CAR, MISSIONS, MONEY, PLAYER, POLICE, STEP, WANTED, WORLD } from './config.js';
 import { createCity, isOnRoad } from './city.js';
 import { createRandom } from './random.js';
 import { createCombat, fireBullet, spawnParticles, stepCombat } from './combat.js';
 import { advanceStep, createMissionState, currentMission, currentStep, failMission, nextMissionIndex, startMission, stepMissions } from './missions.js';
 import { maintainPolice, stepFootCop, stepPoliceCar, wantedStars } from './police.js';
-import { driveCar, makeCar, spawnParked, spawnTraffic } from './vehicles.js';
+import { driveCar, makeCar, spawnParked, spawnTraffic, stepTraffic } from './vehicles.js';
 import { makePed, spawnPed, stepPed } from './peds.js';
 
 export const EVENT_SHOT = 1;
@@ -86,7 +86,7 @@ export function createWorld(random) {
       if (c) state.cars.push(c);
     }
     for (let i = 0; i < 8; i += 1) {
-      const c = spawnParked(random, player.x, player.y);
+      const c = spawnParked(random, player.x, player.y, city.insideBuilding);
       if (c) state.cars.push(c);
     }
     for (let i = 0; i < 42; i += 1) state.peds.push(spawnPed(random, city.insideBuilding, player.x, player.y));
@@ -208,7 +208,7 @@ export function createWorld(random) {
         const d = Math.hypot(c.x - player.inCar.x, c.y - player.inCar.y);
         if (d < 44 && Math.abs(speed) > 150) {
           c.health -= 30;
-          player.inCar.health -= 8;
+          player.inCar.health -= 4;
           if (c.health <= 0) { c.dead = true; spawnParticles(combat, c.x, c.y, 20, '#e8c33c', 240, 0.7); }
         }
       }
@@ -375,16 +375,21 @@ export function createWorld(random) {
       maintainPolice(police, dt, random, px, py, state.stars);
       for (const car of police.cars) {
         stepPoliceCar(car, dt, px, py, (c) => {
-          // Ram: damage the player (or their car) and shake the camera.
+          // Ram: damage the player (or their car) and shake the camera. One ram a
+          // second per car, so a chase wears the player down instead of deleting them.
+          if (c.ramTimer > 0) return;
+          c.ramTimer = 1.0;
           if (player.inCar) {
-            player.inCar.health -= POLICE.ramDamage;
+            player.inCar.health -= 2;
+            c.health -= 6; // ramming wears the police car out too
+            if (c.health <= 0) c.dead = true;
             if (player.inCar.health <= 0) {
               player.inCar.dead = true;
               spawnParticles(combat, player.inCar.x, player.inCar.y, 30, '#e8c33c', 300, 1);
               exitCar();
             }
           } else {
-            events |= damagePlayer(POLICE.ramDamage);
+            events |= damagePlayer(6);
           }
           state.cameraShake = Math.max(state.cameraShake, 8);
           c.speed *= 0.4;

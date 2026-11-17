@@ -25,9 +25,9 @@ export function wantedForce(stars) {
 }
 
 function spawnPoint(random, px, py) {
-  // Just off-screen from the player, on a road.
+  // Just off-screen from the player, on a road — close enough to join the chase fast.
   const angle = random() * Math.PI * 2;
-  const dist = 700 + random() * 350;
+  const dist = 550 + random() * 300;
   const x = Math.max(80, Math.min(WORLD.size - 80, px + Math.cos(angle) * dist));
   const y = Math.max(80, Math.min(WORLD.size - 80, py + Math.sin(angle) * dist));
   return { x, y };
@@ -58,6 +58,7 @@ export function maintainPolice(police, dt, random, px, py, stars) {
 /** A police car chases the player: steer at them, ram on contact, slow in tight turns. */
 export function stepPoliceCar(car, dt, px, py, onRam) {
   if (car.dead) return;
+  if (car.ramTimer > 0) car.ramTimer -= dt;
   const dx = px - car.x;
   const dy = py - car.y;
   const dist = Math.hypot(dx, dy);

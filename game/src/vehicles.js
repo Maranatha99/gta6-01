@@ -56,11 +56,11 @@ export function driveCar(car, input, dt, collide) {
 
   const nx = car.x + Math.cos(car.angle) * car.speed * dt;
   const ny = car.y + Math.sin(car.angle) * car.speed * dt;
-  const hit = collide(nx, ny, CAR.length / 2 - 4);
+  const hit = collide(nx, ny, CAR.length / 2);
   if (hit) {
     car.x = hit.x;
     car.y = hit.y;
-    if (Math.abs(car.speed) > 260) car.health -= 6;
+    if (Math.abs(car.speed) > 260) car.health -= 3;
     car.speed *= -0.25;
   } else {
     car.x = nx;
@@ -82,7 +82,7 @@ export function stepTraffic(car, dt, random, cars, collide) {
   let diff = clampAngle(want - car.angle);
   car.angle = clampAngle(car.angle + Math.max(-2.4 * dt, Math.min(2.4 * dt, diff)));
 
-  // Slow down if another car is close ahead.
+  // Slow down if another car is close ahead, and in a hard turn.
   let ahead = 0;
   const ax = Math.cos(car.angle);
   const ay = Math.sin(car.angle);
@@ -94,13 +94,13 @@ export function stepTraffic(car, dt, random, cars, collide) {
     const side = Math.abs(dx * -ay + dy * ax);
     if (along > 0 && along < 110 && side < 40) ahead = Math.max(ahead, 1 - along / 110);
   }
-  const targetSpeed = TRAFFIC.speed * (1 - ahead * 0.85);
+  const targetSpeed = TRAFFIC.speed * (1 - ahead * 0.85) * (1 - Math.min(1, Math.abs(diff) / 1.4) * 0.55);
   car.speed += Math.max(-260 * dt, Math.min(260 * dt, targetSpeed - car.speed));
   if (car.speed < 0) car.speed = 0;
 
   const nx = car.x + Math.cos(car.angle) * car.speed * dt;
   const ny = car.y + Math.sin(car.angle) * car.speed * dt;
-  const hit = collide(nx, ny, CAR.length / 2 - 4);
+  const hit = collide(nx, ny, CAR.length / 2);
   if (hit) {
     car.x = hit.x;
     car.y = hit.y;
@@ -143,16 +143,17 @@ export function spawnTraffic(random, px, py) {
   return null;
 }
 
-/** A parked car near a road, for the player to steal. */
-export function spawnParked(random, px, py) {
+/** A parked car near a road, for the player to steal — on the road's edge, never on a building. */
+export function spawnParked(random, px, py, insideBuilding) {
   for (let tries = 0; tries < 12; tries += 1) {
     const road = ROAD_LINES[Math.floor(random() * ROAD_LINES.length)];
     const along = 160 + random() * (WORLD.size - 320);
     const horizontal = random() < 0.5;
-    const off = (random() < 0.5 ? -1 : 1) * (WORLD.roadWidth / 2 + 24);
+    const off = (random() < 0.5 ? -1 : 1) * (WORLD.roadWidth / 2 - 18);
     const x = horizontal ? along : road + off;
     const y = horizontal ? road + off : along;
     if (Math.hypot(x - px, y - py) < 260) continue;
+    if (insideBuilding && insideBuilding(x, y, 30)) continue;
     return makeCar(x, y, horizontal ? (random() < 0.5 ? 0 : Math.PI) : (random() < 0.5 ? Math.PI / 2 : -Math.PI / 2),
       CAR_COLORS[Math.floor(random() * CAR_COLORS.length)], {});
   }
