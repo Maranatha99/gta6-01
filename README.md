@@ -1,10 +1,10 @@
 # SOLMAR BAY
 
-[![make.fun gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/c/gta6-01)
-[![make.fun rank](https://make.fun/badge/gta6-01/rank.svg)](https://make.fun/c/gta6-01)
-[![make.fun reward](https://make.fun/badge/gta6-01/reward.svg)](https://make.fun/c/gta6-01)
+[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![rank](https://make.fun/badge/gta6-01/Maranatha99/gta6-01/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/Maranatha99/gta6-01/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
-An open-world crime game, built for the [gta6-01](https://make.fun/c/gta6-01) bounty on [make.fun](https://make.fun/?ref=s11m3687).
+An open-world crime game, built for the [gta6-01](https://make.fun/bounty/gta6-01) bounty on [make.fun](https://make.fun/?ref=s11m3687).
 
 You are **Jax Mercer**, a getaway driver trying to go straight in the sun-soaked
 coastal city of **Solmar Bay** — and failing, one job at a time. Steal cars, outrun
@@ -68,3 +68,5 @@ from the real game (see `shots.json`).
 A wholly original game: its city, characters, vehicles, names, story, art and
 sounds were made for this entry. No real city, person, brand or commercial game
 appears in it. Built with plain canvas 2D and WebAudio — no engine, no assets.
+
+<sub>Entered on [make.fun](https://make.fun/?ref=s11m3687&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build software for cash rewards</sub>
