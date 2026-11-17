@@ -279,7 +279,11 @@ export function createWorld(random) {
       }
     } else if (step.kind === 'steal') {
       // The target car waits at the casino; entering it completes the step.
-      if (!state.missionCar) {
+      // If it was destroyed (rammed at speed, shot, or wrecked by a chase)
+      // it comes back: a dead target car could never be entered, which
+      // softlocked the mission with no way forward. The respawn uses the
+      // step's own coordinates, so the fresh car waits at the same casino spot.
+      if (!state.missionCar || state.missionCar.dead) {
         const car = makeCar(step.x, step.y, 0, '#d84a4a', { target: true });
         state.missionCar = car;
         state.cars.push(car);
@@ -505,7 +509,16 @@ export function createWorld(random) {
       state.heat = 130;
       state.stars = wantedStars(state.heat);
     }
-    if (mission.id === 5) missions.rivalsLeft = mission.steps[0].count;
+    if (mission.id === 5) {
+      missions.rivalsLeft = mission.steps[0].count;
+      // Fresh rivals on every (re)start: after a death the respawn restarts
+      // this mission, and the old rivals array still held the dead ones, so
+      // the spawn branch (which only runs when the array is empty) never
+      // fired and rivalsLeft could never reach zero again — a softlock.
+      // rivalsLeft is reset just above, so the fresh spawn and the fresh
+      // counter always agree on how many rivals are left to eliminate.
+      state.rivals = [];
+    }
     return mission;
   }
 

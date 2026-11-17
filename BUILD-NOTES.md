@@ -1,5 +1,46 @@
 # SOLMAR BAY — Build notes (for the next run)
 
+## Status (2026-11-18 ~00:40 WIB, run 4 — FINAL BUILD, ready for parent to seal + submit)
+Game is **playable end-to-end** and all 4 screenshot scenes render cleanly
+(no console errors, no network requests). Dossier builds OK. `makefun check`
+passes everything checkable locally (4 passed: competition_open, snapshot,
+license_osi, entrypoint; 1 failed: transcripts_present — expected, transcripts
+are bundled by the parent at submit; same as runs 1–2).
+**ALL 6 MISSIONS NOW VERIFIED LIVE end-to-end** (real keyboard input, Playwright):
+- Mission 1: run 1. Mission 2 "Package Run": run 3 — pickup marina (3000,2600)
+  with ~53 s left of 90 s, delivery hotel (1800,1000), $500 → $1,700 (+$1,200).
+- Mission 3 "Hot Wheels": run 3 — $500 → $2,300 (+$1,800), after the Bug 1 fix.
+- Mission 4 "Heat Wave": run 2 — COMPLETE twice, $500 → $2,000 (+$1,500).
+- Mission 5 "Loud & Clear": run 4 — COMPLETE live (driver /tmp/test-live-mission5b.js,
+  seed 7, ~350 s): drove to warehouse (2600,2200), eliminated all 6 rivals on foot,
+  $0 → $2,600 (+$2,600 payout). Player died 3× en route (rivals + police) and
+  respawned each time; every respawn reset rivals to 6 (Bug 2 fix verified live 3×).
+  Zero console errors.
+- Mission 6 "The Big Score": run 2 — COMPLETE twice, $500 → $5,500 (+$5,000).
+**Debug hook REMOVED**: `window.__world` is gone from main.js — no debug hook ships
+in the final entry (verified: grep finds nothing in game/).
+NOT submitted yet — parent handles sealing recording 4 + submit. Do NOT stop/seal
+recording 4 (01a1ea94-aeb4-7258-8cdd-50805df6a9fc, node PID 2164) or submit
+from this session. Serve run 4 (`node serve.ts`, PID 2452, port 8080) left running.
+
+## What changed in run 3 (bug fixes from the live mission 2/3 playtests)
+- **Bug 1 (misi 3, SOFTLOCK):** the target Comet GT could be destroyed before
+  being stolen (driver rammed it at ~236 speed; ~4 ticks × 30 damage killed the
+  100-HP car), after which the `steal` step could never complete. Fixed in
+  `game/src/world.js` (stepMission, `steal` branch): if `state.missionCar` is
+  dead/missing, a fresh Comet GT respawns at the casino (step coords). Retest:
+  steal succeeded first try. Run 4 added one clarifying comment line to the hunk.
+- **Bug 2 (misi 5, SOFTLOCK):** dying during mission 5 left `state.rivals`
+  holding the dead rivals, so the spawn branch (only runs when the array is
+  empty) never fired and `rivalsLeft` (reset to 6) could never reach zero.
+  Fixed in `game/src/world.js` (`startMissionAt`): mission 5 (re)start clears
+  `state.rivals = []` and resets `rivalsLeft`. Verified live in run 4: 3 deaths
+  → 3 respawns, rivals reset to 6 every time. Run 4 added one clarifying
+  comment line to the hunk.
+- Test scripts (NOT in repo, /tmp was wiped by a VM restart between run 3 and 4;
+  mission 5 driver recovered from the run-3 session log, screenshot script
+  rewritten fresh): /tmp/test-live-mission5b.js, /tmp/capture-shots.js.
+
 ## Status (2026-11-17 ~23:50 WIB, run 2)
 Game is **playable end-to-end** and all 4 screenshot scenes render cleanly
 (no console errors, no network requests). Dossier builds OK. `makefun check`
@@ -79,12 +120,11 @@ from this session.
 - Traffic cars' corners can still clip a building edge by a few px at 45°.
 - No car repair / garage shop, no weapon shop, no radio stations, no day/night.
 - No minimap zoom; the minimap road grid is dense but readable.
-- Missions 2, 3, 5 have NOT been playtested live end-to-end (only staged via
-  shots; mission 1 completed live in run 1, missions 4 and 6 in run 2).
-  Worth a live run if time allows before submit — the test drivers in /tmp
-  (test-live-mission4/6.js) show the pattern, but they need `window.__world`,
-  which was REMOVED from main.js in run 2; re-add it temporarily to test,
-  then remove it again before the final commit.
+- All 6 missions have now been playtested live end-to-end (runs 1–4).
+  The live-test drivers live in /tmp (test-live-mission5b.js, capture-shots.js)
+  and are NOT in the repo; they need `window.__world`, which was REMOVED from
+  main.js in run 4 — re-add it temporarily to test, then remove it again
+  before the final commit.
 - The live-test driver is clumsy: it plows through traffic, gets stuck on
   building corners, and swaps cars even when the escape is nearly done. The
   game is completable despite it; a human driver does better.
@@ -95,11 +135,10 @@ from this session.
 
 ## Before submit (parent)
 1. `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts` — verify dossier.json.
-   (Done in run 2; regenerate if anything changes after this.)
-2. Missions 4 and 6 verified live in run 2; missions 2, 3, 5 live if time allows.
+   (Done in run 4; regenerate if anything changes after this.)
+2. All 6 missions verified live (runs 1–4).
 3. Commit + push (this run's work is pushed; see `git log`), then seal
-   recording 2 (01a1ea3c-453e-778a-801f-b7979dc4ee30), write usage rows to
+   recording 4 (01a1ea94-aeb4-7258-8cdd-50805df6a9fc), write usage rows to
    ~/.makefun/muse-usage-gta6-01.jsonl, submit with --recording
-   01a1ea3c-453e-778a-801f-b7979dc4ee30. Recording 1
-   (01a1ea1d-0fdf-7120-bae0-d816a9896a63) is already sealed — do NOT reuse it
-   for this run's changes.
+   01a1ea94-aeb4-7258-8cdd-50805df6a9fc. Recordings 1–3 are already sealed —
+   do NOT reuse them for this run's changes.
