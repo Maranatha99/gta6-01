@@ -1,8 +1,11 @@
 # SOLMAR BAY — Build notes (for the next run)
 
-## Status (2026-11-17 ~16:05 WIB)
+## Status (2026-11-17 ~16:10 WIB)
 Game is **playable end-to-end** and all 4 screenshot scenes render cleanly
-(no console errors, no network requests). Dossier builds OK (see below).
+(no console errors, no network requests). Dossier builds OK. `makefun check`
+passes (4 passed, 0 failed; transcript checks are server-side at submit).
+**Live playtest verified**: walk to car → E enters → steal raises wanted →
+drive to Mara's Garage → mission 1 completes, $500 → $1,300.
 NOT submitted yet — parent handles sealing + submit. Do NOT stop/seal the
 recording (01a1ea1d-0fdf-7120-bae0-d816a9896a63) or submit from this session.
 
@@ -41,9 +44,11 @@ recording (01a1ea1d-0fdf-7120-bae0-d816a9896a63) or submit from this session.
 - No car repair / garage shop, no weapon shop, no radio stations, no day/night.
 - No minimap zoom; the minimap road grid is dense but readable.
 - Mission 4 (Heat Wave) and 6 (Big Score) have NOT been playtested live end-to-end
-  (only missions 1–2 staging verified via shots). Test them with the probe hook:
-  `window.__world` is set in shot mode (see /tmp/probe-chase.js pattern).
-- `window.__world` debug hook ships in main.js runShot — harmless, keep or remove.
+  (only missions 1–2 staging verified via shots; mission 1 completed live).
+  Test them with the probe hook: `window.__world` is set in shot mode AND in
+  live mode (see /tmp/probe-chase.js and /tmp/test-live-mission.js patterns).
+- `window.__world` debug hook ships in main.js (runShot + runGame) — harmless,
+  keep or remove.
 - The live-game test in /tmp/test-solmar.js presses E on foot near spawn and
   shoots once; it does not enter a car live. Worth a live car-enter + mission-1
   completion test before submitting.
