@@ -140,5 +140,40 @@ export function createCity(random) {
     return false;
   }
 
-  return { buildings, trees, lamps, parks, pickups, places, collideCircle, insideBuilding };
+  /** True when no building stands between (x1, y1) and (x2, y2): the slab test
+   * against every building box. A unit inside a building sees nothing. */
+  function hasLineOfSight(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    for (const b of buildings) {
+      let tmin = 0;
+      let tmax = 1;
+      let blocked = false;
+      if (Math.abs(dx) < 1e-9) {
+        if (x1 < b.x || x1 > b.x + b.w) continue;
+      } else {
+        let t1 = (b.x - x1) / dx;
+        let t2 = (b.x + b.w - x1) / dx;
+        if (t1 > t2) { const t = t1; t1 = t2; t2 = t; }
+        tmin = Math.max(tmin, t1);
+        tmax = Math.min(tmax, t2);
+        if (tmin > tmax) continue;
+      }
+      if (Math.abs(dy) < 1e-9) {
+        if (y1 < b.y || y1 > b.y + b.h) continue;
+      } else {
+        let t1 = (b.y - y1) / dy;
+        let t2 = (b.y + b.h - y1) / dy;
+        if (t1 > t2) { const t = t1; t1 = t2; t2 = t; }
+        tmin = Math.max(tmin, t1);
+        tmax = Math.min(tmax, t2);
+        if (tmin > tmax) continue;
+      }
+      blocked = true;
+      if (blocked) return false;
+    }
+    return true;
+  }
+
+  return { buildings, trees, lamps, parks, pickups, places, collideCircle, insideBuilding, hasLineOfSight };
 }

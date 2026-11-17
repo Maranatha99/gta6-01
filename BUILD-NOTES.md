@@ -1,15 +1,53 @@
 # SOLMAR BAY — Build notes (for the next run)
 
-## Status (2026-11-17 ~16:10 WIB)
+## Status (2026-11-17 ~23:50 WIB, run 2)
 Game is **playable end-to-end** and all 4 screenshot scenes render cleanly
 (no console errors, no network requests). Dossier builds OK. `makefun check`
 passes (4 passed, 0 failed; transcript checks are server-side at submit).
-**Live playtest verified**: walk to car → E enters → steal raises wanted →
-drive to Mara's Garage → mission 1 completes, $500 → $1,300.
-NOT submitted yet — parent handles sealing + submit. Do NOT stop/seal the
-recording (01a1ea1d-0fdf-7120-bae0-d816a9896a63) or submit from this session.
+**Live playtests verified in run 2** (real keyboard input, Playwright):
+- Mission 4 "Heat Wave": COMPLETE live twice — drive the road grid until the
+  3-star heat fades, $500 → $2,000 (+$1,500). ~60 s after the decay retune.
+- Mission 6 "The Big Score": COMPLETE live twice — bank pickup (150 s timer),
+  4-star escape, safehouse, $500 → $5,500 (+$5,000). Once driving in, once
+  finishing on foot after the car died at the safehouse door.
+- Mission 1 completed live in run 1. Missions 2, 3, 5 staged/verified via shots
+  only — not yet played live end-to-end.
+**Debug hook REMOVED**: `window.__world` is gone from main.js (both runShot
+and runGame) — no debug hook ships in the final entry.
+NOT submitted yet — parent handles sealing + submit. Do NOT stop/seal
+recording 2 (01a1ea3c-453e-778a-801f-b7979dc4ee30, node PID 5354) or submit
+from this session.
 
-## What is done
+## What changed in run 2 (bug fixes from the live mission 4/6 playtests)
+- **Traffic cars drove off the world** (`vehicles.js`): stepTraffic never
+  clamped positions, so a traffic car could end up at x=4026 (outside the
+  3200 world), unreachable — the nearest-car search then sent the player
+  walking into the void. Fixed: clamp to the world + U-turn at the edges.
+- **Peds strolled into speeding cars** (`peds.js`, `world.js`): the "danger"
+  passed to peds was only gunfire, so peds kept crossing roads in front of a
+  560-speed car; each run-over is +45 heat, which stacked the Big Score to
+  5 stars. Fixed: a fast car (>200 speed) is danger too; peds on a road run
+  perpendicular to the nearest sidewalk, peds off-road dodge sideways out of
+  the car's path (needs the car's heading). A `carFlee` timer holds the
+  escape target so the retarget logic cannot replace it mid-flight.
+- **Bank-job heat stacked past the brief** (`world.js`): the pickup added 200
+  heat on top of whatever the player had (up to 5 stars). Fixed: the pickup
+  now SETS heat to 230 — solidly inside the four-star band (200–319), so the
+  player actually faces the promised four-star response.
+- **Escapes were unwinnable** (`world.js`, `config.js`, `city.js`): police are
+  faster than the player (605 vs 560) and 4–5 units converge, so "seen" was
+  the permanent state and heat decayed at 2.2/s — the Big Score escape
+  stretched past 5 minutes live. Fixed: (a) "seen" now needs a clear line of
+  sight (`city.hasLineOfSight`, segment-vs-buildings slab test) — weaving
+  through blocks really breaks the heat; (b) seen decay 2.2 → 4/s.
+  Mission 6 escape is now ~60–100 s of active evasion.
+- **Police rams shredded cars** (`world.js`): ram damage to the player's car
+  2 → 1 per ram (police car wear stays −6), so one car lasts a whole escape leg.
+- **Stale traffic** (`world.js`): traffic cars more than 1500 px from the
+  player are retired so fresh cars keep spawning near the player.
+- Test scripts (NOT in repo): /tmp/test-live-mission4.js,
+  /tmp/test-live-mission6.js (real-keyboard drivers with Manhattan nav),
+  /tmp/test-los.mjs (line-of-sight geometry check: 4/4 correct).
 - City: 3200×3200 seeded grid (8×8 roads), buildings, parks, beach + ocean,
   named places, prerendered static layer. `game/src/city.js`
 - Player on foot (WASD, Shift sprint, mouse aim, click shoot) + car entry/exit (E).
@@ -38,25 +76,30 @@ recording (01a1ea1d-0fdf-7120-bae0-d816a9896a63) or submit from this session.
 - Last pushed commit: check `git log` (core game + fixes).
 
 ## Known gaps / polish ideas for the next run
-- Peds can be run over while crossing roads (by design, GTA-like) — that is why
-  the play shot shows 1 star. Fine, but could add ped road-crossing caution.
 - Traffic cars' corners can still clip a building edge by a few px at 45°.
 - No car repair / garage shop, no weapon shop, no radio stations, no day/night.
 - No minimap zoom; the minimap road grid is dense but readable.
-- Mission 4 (Heat Wave) and 6 (Big Score) have NOT been playtested live end-to-end
-  (only missions 1–2 staging verified via shots; mission 1 completed live).
-  Test them with the probe hook: `window.__world` is set in shot mode AND in
-  live mode (see /tmp/probe-chase.js and /tmp/test-live-mission.js patterns).
-- `window.__world` debug hook ships in main.js (runShot + runGame) — harmless,
-  keep or remove.
-- The live-game test in /tmp/test-solmar.js presses E on foot near spawn and
-  shoots once; it does not enter a car live. Worth a live car-enter + mission-1
-  completion test before submitting.
+- Missions 2, 3, 5 have NOT been playtested live end-to-end (only staged via
+  shots; mission 1 completed live in run 1, missions 4 and 6 in run 2).
+  Worth a live run if time allows before submit — the test drivers in /tmp
+  (test-live-mission4/6.js) show the pattern, but they need `window.__world`,
+  which was REMOVED from main.js in run 2; re-add it temporarily to test,
+  then remove it again before the final commit.
+- The live-test driver is clumsy: it plows through traffic, gets stuck on
+  building corners, and swaps cars even when the escape is nearly done. The
+  game is completable despite it; a human driver does better.
+- The Big Score escape is still long (~60–100 s of evasion with 2–3 car
+  swaps). It is winnable, but if the parent wants it tighter, the knobs are
+  WANTED.decayPerSecond (now 4) and the 230 bank-job heat in world.js.
 - `serve.ts` still says "Block Dodger"? No — check; serve.ts is the kit's, fine.
 
 ## Before submit (parent)
 1. `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts` — verify dossier.json.
-2. Playtest mission 4 and 6 live if time allows; fix anything broken.
-3. Commit + push, then seal recording, write usage rows to
+   (Done in run 2; regenerate if anything changes after this.)
+2. Missions 4 and 6 verified live in run 2; missions 2, 3, 5 live if time allows.
+3. Commit + push (this run's work is pushed; see `git log`), then seal
+   recording 2 (01a1ea3c-453e-778a-801f-b7979dc4ee30), write usage rows to
    ~/.makefun/muse-usage-gta6-01.jsonl, submit with --recording
-   01a1ea1d-0fdf-7120-bae0-d816a9896a63.
+   01a1ea3c-453e-778a-801f-b7979dc4ee30. Recording 1
+   (01a1ea1d-0fdf-7120-bae0-d816a9896a63) is already sealed — do NOT reuse it
+   for this run's changes.

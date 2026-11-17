@@ -112,6 +112,19 @@ export function stepTraffic(car, dt, random, cars, collide) {
     car.stuck = 0;
   }
 
+  // Stay inside the world: a car that reaches the edge turns around instead of
+  // driving off the map forever (an escaped car could sit at x=4000, unreachable,
+  // and the nearest-car search would send the player after it).
+  if (car.axis === 'x') {
+    if (car.x <= 50) { car.x = 50; car.dir = 1; }
+    else if (car.x >= WORLD.size - 50) { car.x = WORLD.size - 50; car.dir = -1; }
+  } else {
+    if (car.y <= 50) { car.y = 50; car.dir = 1; }
+    else if (car.y >= WORLD.size - 50) { car.y = WORLD.size - 50; car.dir = -1; }
+  }
+  car.y = Math.max(40, Math.min(WORLD.size - 40, car.y));
+  car.x = Math.max(40, Math.min(WORLD.size - 40, car.x));
+
   // At an intersection, sometimes turn onto the crossing road.
   const alongRoad = car.axis === 'x' ? car.x : car.y;
   const nearLine = ROAD_LINES.some((p) => Math.abs(alongRoad - p) < 14);

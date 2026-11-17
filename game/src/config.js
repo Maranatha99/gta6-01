@@ -33,7 +33,14 @@ export const PEDS = { count: 42, speed: 55 };
 
 export const WANTED = {
   thresholds: [0, 25, 60, 120, 200, 320],
-  decayPerSecond: 2.2,
+  // Heat fades while the police can see the player, and much faster once the
+  // player breaks line of sight. The "seen" rate is the one that decides the
+  // escapes: at 2.2/s a four-star escape needed 80 s of perfect driving and
+  // stretched past five minutes live (every car swap adds 30 heat back), so
+  // the Big Score was effectively unwinnable. At 4/s the escape is ~45 s of
+  // active evasion — still tense, with rams, busts and car swaps — and the
+  // three-star Heat Wave stays around half a minute.
+  decayPerSecond: 4,
   unseenDecay: 9,
   crimeSteal: 30,
   crimeShoot: 18,

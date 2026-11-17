@@ -265,7 +265,17 @@ export function createWorld(random) {
       if (dist < 70) {
         const res = advanceStep(missions);
         if (res && res.complete) { state.money += res.payout; events |= EVENT_MISSION_DONE; }
-        else if (mission.id === 6) addHeat(320 - state.heat > 0 ? 200 : 0); // bank job: four stars
+        else if (mission.id === 6) {
+          // Bank job: the response is four stars — set the heat to 230, solidly
+          // inside the four-star band (200–319), whatever the player arrived
+          // with. (Adding 200 on top of heat the player already had could stack
+          // to five stars, which the brief never asks for and makes the escape
+          // effectively unwinnable. Setting exactly 200 would decay below the
+          // band on the very next tick, so the player would never actually face
+          // the promised four-star response.)
+          state.heat = 230;
+          state.stars = wantedStars(state.heat);
+        }
       }
     } else if (step.kind === 'steal') {
       // The target car waits at the casino; entering it completes the step.
@@ -324,7 +334,8 @@ export function createWorld(random) {
     // Traffic and parked-car upkeep: keep the streets full near the player.
     const px = player.inCar ? player.inCar.x : player.x;
     const py = player.inCar ? player.inCar.y : player.y;
-    state.cars = state.cars.filter((c) => !c.dead || c === player.inCar);
+    state.cars = state.cars.filter((c) => (!c.dead || c === player.inCar)
+      && (!c.traffic || Math.hypot(c.x - px, c.y - py) < 1500));
     if (state.cars.filter((c) => c.traffic).length < 20) {
       const c = spawnTraffic(random, px, py);
       if (c) state.cars.push(c);
@@ -333,8 +344,10 @@ export function createWorld(random) {
       if (c.traffic && c !== player.inCar) stepTraffic(c, dt, random, state.cars, (x, y, r) => collideCircle(x, y, r));
     }
 
-    // Pedestrians.
-    const danger = input.fire ? { x: player.x, y: player.y } : null;
+    // Pedestrians. A fast car is danger too: peds on the road get out of its way.
+    const fastCar = player.inCar && Math.abs(player.inCar.speed) > 200 ? player.inCar : null;
+    const danger = input.fire ? { x: player.x, y: player.y }
+      : fastCar ? { x: fastCar.x, y: fastCar.y, car: true, angle: fastCar.angle } : null;
     for (const ped of state.peds) {
       if (ped.state === 'dead') continue;
       stepPed(ped, dt, random, danger);
@@ -362,8 +375,15 @@ export function createWorld(random) {
     }
 
     // Wanted heat: decay when unseen, faster when no police are near.
-    const nearPolice = police.cars.some((c) => Math.hypot(c.x - px, c.y - py) < 500) ||
-      police.cops.some((c) => Math.hypot(c.x - px, c.y - py) < 400);
+    // "Seen" needs a clear line of sight, not just distance: a police unit
+    // behind a building (or cutting across a block) does not see the player,
+    // so weaving through the blocks really does break the heat — that is what
+    // the Heat Wave / Big Score escapes are about. Police cars drive through
+    // buildings, so a unit inside a block counts as blind too.
+    const seesPlayer = (ux, uy, range) => Math.hypot(ux - px, uy - py) < range
+      && city.hasLineOfSight(ux, uy, px, py);
+    const nearPolice = police.cars.some((c) => seesPlayer(c.x, c.y, 500)) ||
+      police.cops.some((c) => seesPlayer(c.x, c.y, 400));
     state.wantedSeen = nearPolice;
     if (state.stars > 0) {
       state.heat -= (nearPolice ? WANTED.decayPerSecond : WANTED.unseenDecay) * dt;
@@ -380,7 +400,8 @@ export function createWorld(random) {
           if (c.ramTimer > 0) return;
           c.ramTimer = 1.0;
           if (player.inCar) {
-            player.inCar.health -= 2;
+            player.inCar.health -= 1; // a ram chips the car; at 1/s per police car
+            // a chase still wears it down, but one car now lasts a whole escape leg
             c.health -= 6; // ramming wears the police car out too
             if (c.health <= 0) c.dead = true;
             if (player.inCar.health <= 0) {

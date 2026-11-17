@@ -50,7 +50,6 @@ function refreshMenu() {
 
 function runShot(name) {
   const scene = stageShot(name, world);
-  window.__world = world; // debug hook: lets a playtest read the staged state
   const shotUi = {
     ...ui,
     objective: world.missionLabel(),
@@ -79,7 +78,6 @@ function objectivePos() {
 
 function runGame() {
   const input = createInput(canvas);
-  window.__world = world; // debug hook: lets a playtest read the live state
   let screen = SCREEN_TITLE;
   let accumulator = 0;
   let last = performance.now();

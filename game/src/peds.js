@@ -1,7 +1,7 @@
 // Pedestrians: they stroll the sidewalks, cross roads at intersections, and run away
 // from gunfire and speeding cars. A few are armed rivals during the warehouse mission.
 import { PEDS, WORLD } from './config.js';
-import { ROAD_LINES, isOnRoad } from './city.js';
+import { ROAD_LINES, isOnRoad, nearestRoad } from './city.js';
 
 export const PED_COLORS = ['#e8b88a', '#c98a6a', '#8a6a4a', '#d8d8d8', '#7a5a8a', '#4a7a8a', '#e8e8a8', '#a85a5a'];
 const SHIRTS = ['#4a7ad8', '#d84a4a', '#e8c33c', '#4ad8a8', '#d88ad8', '#e87c3c', '#7fb8a8', '#a8a8a8'];
@@ -20,6 +20,7 @@ export function makePed(random, x, y, opts = {}) {
     targetY: y,
     retarget: 0,
     panic: 0,
+    carFlee: 0, // seconds left fleeing a fast car (holds the sidewalk target)
     shootTimer: 0,
   };
 }
@@ -43,13 +44,47 @@ export function stepPed(ped, dt, random, danger) {
   if (ped.state === 'dead') return;
   ped.retarget -= dt;
   if (ped.panic > 0) ped.panic -= dt;
+  if (ped.carFlee > 0) ped.carFlee -= dt;
 
   // Danger (gunfire, a car bearing down): run away from it.
   if (danger) {
     const dx = ped.x - danger.x;
     const dy = ped.y - danger.y;
     const d = Math.hypot(dx, dy);
-    if (d < 320) {
+    if (danger.car) {
+      // A fast car is coming: if the ped is on the road, get off it — run to the
+      // nearest sidewalk, perpendicular to the road, instead of strolling across
+      // in front of the car. (Running straight away would keep them in its path.)
+      // The 380 px look-ahead gives a ped ~0.7 s to clear the road at flee speed.
+      // carFlee holds the escape target: the retarget logic below must not
+      // replace it with a random dash while the car is still coming.
+      if (d < 380) {
+        ped.state = 'flee';
+        ped.panic = 1.5;
+        ped.carFlee = 1.5;
+        if (isOnRoad(ped.x, ped.y)) {
+          const rx = nearestRoad(ped.x);
+          const ry = nearestRoad(ped.y);
+          const off = WORLD.roadWidth / 2 + 30;
+          if (Math.abs(ped.y - ry) <= Math.abs(ped.x - rx)) {
+            ped.targetX = ped.x;
+            ped.targetY = ry + (ped.y >= ry ? off : -off);
+          } else {
+            ped.targetX = rx + (ped.x >= rx ? off : -off);
+            ped.targetY = ped.y;
+          }
+        } else {
+          // Off the road (sidewalk, park, beach): dodge sideways out of the
+          // car's path, to whichever side of its heading the ped is already on.
+          const pxn = -Math.sin(danger.angle || 0);
+          const pyn = Math.cos(danger.angle || 0);
+          const side = (ped.x - danger.x) * pxn + (ped.y - danger.y) * pyn;
+          const s = side >= 0 ? 1 : -1;
+          ped.targetX = ped.x + pxn * s * 220;
+          ped.targetY = ped.y + pyn * s * 220;
+        }
+      }
+    } else if (d < 320) {
       ped.state = 'flee';
       ped.panic = 1.5;
       ped.targetX = ped.x + (dx / (d || 1)) * 300;
@@ -58,7 +93,7 @@ export function stepPed(ped, dt, random, danger) {
   }
   if (ped.state === 'flee' && ped.panic <= 0) ped.state = 'walk';
 
-  if (ped.retarget <= 0 || Math.hypot(ped.targetX - ped.x, ped.targetY - ped.y) < 24) {
+  if (ped.carFlee <= 0 && (ped.retarget <= 0 || Math.hypot(ped.targetX - ped.x, ped.targetY - ped.y) < 24)) {
     if (ped.state !== 'flee') pickTarget(ped, random);
     else { ped.targetX = ped.x + (random() - 0.5) * 400; ped.targetY = ped.y + (random() - 0.5) * 400; }
   }
@@ -72,7 +107,8 @@ export function stepPed(ped, dt, random, danger) {
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     ped.angle += Math.max(-4 * dt, Math.min(4 * dt, diff));
-    const speed = ped.state === 'flee' ? ped.speed * 2.1 : ped.speed;
+    // A ped fleeing a car runs a little harder than one fleeing gunfire.
+    const speed = ped.state === 'flee' ? ped.speed * (ped.carFlee > 0 ? 2.6 : 2.1) : ped.speed;
     ped.x += Math.cos(ped.angle) * speed * dt;
     ped.y += Math.sin(ped.angle) * speed * dt;
   }
